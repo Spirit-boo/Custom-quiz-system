@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#4A90D9">
+  <meta name="description" content="个人定制刷题助手 - 导入题库、刷题练习、错题管理">
+  <title>刷题助手</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <div id="app">
+    <!-- ===== 顶部标题栏 ===== -->
+    <header id="topBar">
+      <button id="btnBack" class="btn-icon" onclick="App.goBack()" style="visibility:hidden;">←</button>
+      <span id="topTitle">刷题助手</span>
+      <button id="btnMenu" class="btn-icon" onclick="App.toggleMenu()">⋯</button>
+    </header>
+
+    <!-- ===== 视图容器 ===== -->
+    <main id="viewContainer">
+      <!-- 0. 首页 -->
+      <section id="view-home" class="view active">
+        <div class="container">
+          <div class="card" id="homeStats">
+            <div class="text-heading">题库概览</div>
+            <div class="divider"></div>
+            <div id="statsContent"></div>
+          </div>
+          <div class="card" id="homeActions">
+            <div class="text-heading">快捷操作</div>
+            <div class="divider"></div>
+            <button class="btn-primary btn-block" onclick="App.navTo('setup')">▶ 开始答题</button>
+            <button class="btn-secondary btn-block" onclick="App.navTo('import')">📥 导入题库</button>
+            <div class="btn-row">
+              <button class="btn-secondary btn-half" onclick="App.switchTab('wrong-book')">📕 错题本</button>
+              <button class="btn-secondary btn-half" onclick="App.navTo('favorites')">⭐ 收藏夹</button>
+            </div>
+          </div>
+          <div class="card" id="homeRecent" style="display:none;"></div>
+        </div>
+      </section>
+
+      <!-- 1. 题库导入 -->
+      <section id="view-import" class="view">
+        <div class="container">
+          <!-- 当前题库概况 -->
+          <div class="card" id="importBankInfo">
+            <div class="text-heading">当前题库</div>
+            <div id="importBankStats" class="text-caption"></div>
+            <div class="btn-row mt-8">
+              <button class="btn-secondary btn-half" style="border-color:var(--wrong);color:var(--wrong);" onclick="ImportPage.clearBank()">🗑 清空题库</button>
+              <button class="btn-secondary btn-half" onclick="App.showBankManager()">📋 查看题目</button>
+            </div>
+          </div>
+          <div id="importDropZone" class="card drop-zone" onclick="document.getElementById('fileInput').click()">
+            <div class="drop-icon">📥</div>
+            <div class="text-subtitle">点击选择文件</div>
+            <div class="text-caption">支持 Excel (.xlsx/.xls)、CSV、TXT</div>
+            <input type="file" id="fileInput" accept=".xlsx,.xls,.csv,.txt" style="display:none;" onchange="ImportPage.handleFile(event)">
+          </div>
+          <div id="importPreview" style="display:none;">
+            <div class="card" id="mappingArea"></div>
+            <div class="card" id="validationArea"></div>
+            <button class="btn-primary btn-block" onclick="ImportPage.confirm()">确认导入</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. 答题设置 -->
+      <section id="view-setup" class="view">
+        <div class="container">
+          <div class="card">
+            <div class="text-heading">题目数量</div>
+            <div class="chip-row" id="countChips"></div>
+          </div>
+          <div class="card">
+            <div class="text-heading">出题模式</div>
+            <div class="chip-row" id="modeChips"></div>
+          </div>
+          <div class="card">
+            <div class="text-heading">题型筛选</div>
+            <div class="chip-row" id="typeChips"></div>
+            <div class="text-caption" id="filteredCount" style="margin-top:12rpx;"></div>
+          </div>
+          <button class="btn-primary btn-block" onclick="SetupPage.start()">开始答题</button>
+          <div id="resumeBanner" class="card" style="display:none;background:#FFF7E6;margin-top:24rpx;"></div>
+        </div>
+      </section>
+
+      <!-- 3. 答题 -->
+      <section id="view-quiz" class="view">
+        <div class="container">
+          <div class="progress-bar"><div class="progress-fill" id="quizProgress"></div></div>
+          <div class="flex-between" style="margin-bottom:16rpx;">
+            <span class="text-caption" id="quizCounter"></span>
+            <div class="flex-row">
+              <span class="tag" id="quizTypeTag"></span>
+              <button class="btn-icon btn-fav" id="quizFavBtn" onclick="QuizPage.toggleFav()">☆</button>
+            </div>
+          </div>
+          <div class="card quiz-card">
+            <div class="text-subtitle" id="quizQuestion"></div>
+            <div id="quizOptions" class="options-area"></div>
+            <div id="quizFeedback" style="display:none;"></div>
+          </div>
+          <button class="btn-primary btn-block" id="quizSubmitBtn" onclick="QuizPage.submit()">提交答案</button>
+          <button class="btn-primary btn-block" id="quizNextBtn" style="display:none;" onclick="QuizPage.next()">下一题</button>
+        </div>
+      </section>
+
+      <!-- 4. 答题报告 -->
+      <section id="view-result" class="view">
+        <div class="container">
+          <div class="card result-hero">
+            <div id="resultEmoji" style="font-size:64rpx;"></div>
+            <div class="text-title" id="resultAccuracy"></div>
+            <div class="text-caption">正确率</div>
+            <div class="divider"></div>
+            <div class="result-stats" id="resultStats"></div>
+          </div>
+          <div class="card" id="resultTypeStats"></div>
+          <div class="card" id="resultWrongList"></div>
+          <button class="btn-primary btn-block" id="btnRedoWrong">重做错题</button>
+          <button class="btn-secondary btn-block" onclick="App.navTo('home')">返回首页</button>
+        </div>
+      </section>
+
+      <!-- 5. 错题本 -->
+      <section id="view-wrong-book" class="view">
+        <div class="container">
+          <div id="wrongList"></div>
+          <div id="wrongEmpty" class="empty-state" style="display:none;">
+            <div class="icon">📕</div><div class="text">错题本为空</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 6. 收藏夹 -->
+      <section id="view-favorites" class="view">
+        <div class="container">
+          <div id="favList"></div>
+          <div id="favEmpty" class="empty-state" style="display:none;">
+            <div class="icon">⭐</div><div class="text">收藏夹为空</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 7. 搜索 -->
+      <section id="view-search" class="view">
+        <div class="container">
+          <div class="search-bar">
+            <input class="search-input" id="searchInput" placeholder="搜索题目、解析、标签..." oninput="SearchPage.onInput()" onkeydown="if(event.key==='Enter')SearchPage.search()">
+            <button class="btn-primary" onclick="SearchPage.search()">搜索</button>
+          </div>
+          <div id="searchResults"></div>
+          <div id="searchEmpty" class="empty-state">
+            <div class="icon">🔍</div><div class="text">输入关键词搜索题库</div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- ===== 底部导航栏 ===== -->
+    <nav id="bottomNav">
+      <button class="nav-item active" data-tab="home" onclick="App.switchTab('home')">
+        <span class="nav-icon">🏠</span><span class="nav-label">首页</span>
+      </button>
+      <button class="nav-item" data-tab="wrong-book" onclick="App.switchTab('wrong-book')">
+        <span class="nav-icon">📕</span><span class="nav-label">错题本</span>
+      </button>
+      <button class="nav-item" data-tab="search" onclick="App.switchTab('search')">
+        <span class="nav-icon">🔍</span><span class="nav-label">搜索</span>
+      </button>
+    </nav>
+
+    <!-- ===== Toast ===== -->
+    <div id="toast" class="toast"></div>
+
+    <!-- ===== 题库管理弹窗 ===== -->
+    <div id="modalOverlay" class="modal-overlay" onclick="App.closeModal()">
+      <div class="modal-content" onclick="event.stopPropagation()">
+        <div class="flex-between" style="margin-bottom:16px;">
+          <span class="text-heading">📋 题库管理</span>
+          <button class="btn-icon" style="color:var(--text);font-size:24px;" onclick="App.closeModal()">✕</button>
+        </div>
+        <div class="text-caption mb-8" id="modalCount"></div>
+        <div class="divider"></div>
+        <div id="modalList" style="max-height:60vh;overflow-y:auto;"></div>
+        <div class="btn-row mt-8">
+          <button class="btn-secondary btn-half" style="border-color:var(--wrong);color:var(--wrong);" onclick="App.clearAllBank()">🗑 清空全部</button>
+          <button class="btn-secondary btn-half" onclick="App.closeModal()">关闭</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- JS 模块 -->
+  <script src="js/storage.js"></script>
+  <script src="js/parser.js"></script>
+  <script src="js/validator.js"></script>
+  <script src="js/quiz-engine.js"></script>
+  <script src="js/report.js"></script>
+  <script src="js/app.js"></script>
+
+  <!-- Service Worker -->
+  <script>
+    if ('serviceWorker' in navigator && location.protocol === 'https:') {
+      navigator.serviceWorker.register('sw.js');
+    }
+  </script>
+</body>
+</html>
