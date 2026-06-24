@@ -105,20 +105,20 @@ const App = (() => {
   // ===== 菜单 =====
   function toggleMenu() {
     const hasData = Storage.getQuestionBank().length > 0;
-    const options = ['📋 管理题库'];
-    if (hasData) options.push('💾 导出题库', '🗑 清空题库');
+    const hasHistory = Storage.getQuizHistory().length > 0;
+    const options = [];
+    if (hasData) options.push('📋 管理题库', '💾 导出题库', '🗑 清空题库');
+    if (hasHistory) options.push('🧹 清除答题记录');
     options.push('取消');
 
-    // 用模态替代 confirm（简单处理）
-    const choice = prompt(
-      '菜单选项：\n\n' +
-      (hasData ? '1 - 📋 管理题库（浏览/删除题目）\n2 - 💾 导出题库（JSON备份）\n3 - 🗑 清空题库\n4 - 取消\n' : '1 - 📋 管理题库\n4 - 取消\n') +
-      '\n请输入数字：'
-    );
+    const menuText = options.map((o, i) => `${i + 1} - ${o}`).join('\n');
+    const choice = prompt('菜单选项：\n\n' + menuText + '\n\n请输入数字：');
 
-    if (choice === '1') showBankManager();
-    if (choice === '2' && hasData) exportBank();
-    if (choice === '3' && hasData) clearAllBank();
+    let idx = 1;
+    if (choice === String(idx++) && hasData) showBankManager();
+    else if (choice === String(idx++) && hasData) exportBank();
+    else if (choice === String(idx++) && hasData) clearAllBank();
+    else if (choice === String(idx++) && hasHistory) clearHistory();
   }
 
   function exportBank() {
@@ -182,6 +182,15 @@ const App = (() => {
     if (currentTab === 'home') HomePage.render();
   }
 
+  function clearHistory() {
+    const history = Storage.getQuizHistory();
+    if (history.length === 0) { toast('没有答题记录'); return; }
+    if (!confirm(`确定清除全部 ${history.length} 条答题记录吗？`)) return;
+    localStorage.removeItem(Storage.KEYS.QUIZ_HISTORY);
+    toast('答题记录已清除');
+    if (currentTab === 'home') HomePage.render();
+  }
+
   // ===== 初始化 =====
   function init() {
     switchTab('home');
@@ -196,12 +205,25 @@ const App = (() => {
     }
   }
 
-  return { switchTab, navTo, goBack, toast, toggleMenu, init, getTitle, showBankManager, closeModal, deleteQuestion, clearAllBank };
+  return { switchTab, navTo, goBack, toast, toggleMenu, init, getTitle, showBankManager, closeModal, deleteQuestion, clearAllBank, clearHistory };
 })();
 
 // ===== 首页 =====
 const HomePage = {
+  // 清理无效的错题记录（题目已从题库删除但错题本还有）
+  cleanupWrongBook() {
+    const wb = Storage.getWrongBook();
+    const bankIds = new Set(Storage.getQuestionBank().map(q => q.id));
+    let cleaned = false;
+    for (const id of Object.keys(wb)) {
+      if (!bankIds.has(id)) { delete wb[id]; cleaned = true; }
+    }
+    if (cleaned) Storage.setWrongBook(wb);
+    return cleaned;
+  },
+
   render() {
+    this.cleanupWrongBook(); // 先清理无效记录
     const stats = Storage.getTypeStats();
     const bank = Storage.getQuestionBank();
     const total = bank.length;
@@ -228,8 +250,8 @@ const HomePage = {
     if (startBtn) startBtn.disabled = total === 0;
 
     // 错题本和收藏数量
-    const wrongBtn = document.querySelector('#homeActions .btn-half:first-child');
-    const favBtn = document.querySelector('#homeActions .btn-half:last-child');
+    const wrongBtn = document.getElementById('btnWrongBook');
+    const favBtn = document.getElementById('btnFavorites');
     if (wrongBtn) wrongBtn.textContent = `📕 错题本 (${wrongCount})`;
     if (favBtn) favBtn.textContent = `⭐ 收藏夹 (${favCount})`;
 
@@ -683,11 +705,16 @@ const QuizPage = {
     // 显示反馈
     const fb = document.getElementById('quizFeedback');
     fb.style.display = 'block';
+    const isWrongMode = this.config && this.config.mode === 'wrong';
     fb.innerHTML = `
       <div class="answer-reveal ${isCorrect ? 'correct' : 'wrong'}">
         <div style="font-size:20px;margin-bottom:8px;">${isCorrect ? '✅ 回答正确！' : '❌ 回答错误'}</div>
         <div class="text-body">正确答案：<b>${q.answer}</b></div>
         ${q.analysis ? `<div class="text-caption mt-8">📖 解析：${q.analysis}</div>` : ''}
+        ${(isCorrect && isWrongMode) ? `
+          <button class="btn-secondary" style="margin-top:12px;padding:8px 20px;font-size:14px;border-color:var(--correct);color:var(--correct);"
+            onclick="QuizPage.removeFromWrong('${q.id}')">✅ 已掌握，从错题本移除</button>
+        ` : ''}
       </div>`;
 
     // 高亮选项
@@ -725,6 +752,17 @@ const QuizPage = {
     } else {
       this.renderQuestion();
       document.getElementById('viewContainer').scrollTop = 0;
+    }
+  },
+
+  removeFromWrong(id) {
+    Storage.removeWrong(id);
+    App.toast('已从错题本移除 ✅');
+    // 隐藏按钮，防止重复点击
+    const fb = document.getElementById('quizFeedback');
+    if (fb) {
+      const btn = fb.querySelector('button');
+      if (btn) { btn.textContent = '✓ 已移除'; btn.disabled = true; btn.style.opacity = '0.6'; }
     }
   },
 

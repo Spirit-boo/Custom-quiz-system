@@ -34,8 +34,8 @@
             <button class="btn-primary btn-block" onclick="App.navTo('setup')">▶ 开始答题</button>
             <button class="btn-secondary btn-block" onclick="App.navTo('import')">📥 导入题库</button>
             <div class="btn-row">
-              <button class="btn-secondary btn-half" onclick="App.switchTab('wrong-book')">📕 错题本</button>
-              <button class="btn-secondary btn-half" onclick="App.navTo('favorites')">⭐ 收藏夹</button>
+              <button id="btnWrongBook" class="btn-secondary btn-half" onclick="App.switchTab('wrong-book')">📕 错题本</button>
+              <button id="btnFavorites" class="btn-secondary btn-half" onclick="App.navTo('favorites')">⭐ 收藏夹</button>
             </div>
           </div>
           <div class="card" id="homeRecent" style="display:none;"></div>
@@ -197,6 +197,7 @@
   </div>
 
   <!-- JS 模块 -->
+  <script src="js/floating-lines.js"></script>
   <script src="js/storage.js"></script>
   <script src="js/parser.js"></script>
   <script src="js/validator.js"></script>
@@ -209,6 +210,21 @@
     if ('serviceWorker' in navigator && location.protocol === 'https:') {
       navigator.serviceWorker.register('sw.js');
     }
+    // 启动浮动线条背景（商业版效果）
+    FloatingLines.init({
+      enabledWaves: ['top', 'middle', 'bottom'],
+      lineCount: 6,
+      lineDistance: 10,
+      bendRadius: 120,
+      bendStrength: -2,
+      animationSpeed: 0.8,
+      gradientStart: '#e945f5',
+      gradientMid: '#6f6f6f',
+      gradientEnd: '#4A90D9',
+      interactive: true,
+      parallax: true,
+      opacity: 0.3
+    });
   </script>
 </body>
 </html>

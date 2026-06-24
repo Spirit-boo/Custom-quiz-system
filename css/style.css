@@ -29,10 +29,21 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
   font-size: 16px;
   color: var(--text);
-  background: var(--bg);
+  background: transparent;
   line-height: 1.6;
   -webkit-tap-highlight-color: transparent;
   -webkit-font-smoothing: antialiased;
+}
+
+/* 背景叠加层：半透明白色让线条可见但不刺眼 */
+body::before {
+  content: '';
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(180deg,
+    rgba(240,246,251,0.82) 0%,
+    rgba(240,246,251,0.75) 50%,
+    rgba(240,246,251,0.88) 100%);
+  z-index: -1; pointer-events: none;
 }
 
 /* ===== App Layout ===== */
@@ -42,7 +53,8 @@ body {
 #topBar {
   display: flex; align-items: center; justify-content: space-between;
   height: var(--header-height); padding: 0 12px;
-  background: var(--primary); color: #fff; flex-shrink: 0;
+  background: rgba(74,144,217,0.92); color: #fff; flex-shrink: 0;
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
 }
 #topTitle { font-size: 18px; font-weight: 600; }
 .btn-icon {
@@ -62,7 +74,8 @@ body {
   display: flex; flex-shrink: 0;
   height: calc(var(--nav-height) + var(--safe-bottom));
   padding-bottom: var(--safe-bottom);
-  background: #fff; border-top: 1px solid var(--border);
+  background: rgba(255,255,255,0.88); border-top: 1px solid var(--border);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
 }
 .nav-item {
   flex: 1; display: flex; flex-direction: column; align-items: center;
